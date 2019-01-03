@@ -17,8 +17,11 @@ parser.add_argument("-js","--japanese_s", action="store_true", help="Use japanes
 parser.add_argument("-tf","--text_features", action="store_true", help="Use text features", required=False)
 parser.add_argument("-ia","--interp_audio", action="store_true", help="Use interpreter audio features", required=False)
 parser.add_argument("-sa","--src_audio", action="store_true", help="Use source audio features", required=False)
+parser.add_argument("-ss","--subsample", help="Subsample parameter value for XGBRegressor", default=1, required=False)
 parser.add_argument("-t","--test", action="store_true", help="Evaluate on test set", required=False)
 args = vars(parser.parse_args())
+
+subsample = float(args["subsample"])
 
 if not args["text_features"] and not args["interp_audio"] and not args["src_audio"]:
 	raise IOError("No features selected, expected flag (-tf/-ia/-sa)")
@@ -114,7 +117,7 @@ def main():
 		X_train, X_test = normalize(X_train, X_test)
 		split_results = []
 		for seed in seeds:
-			clf = XGBRegressor(random_state=seed, subsample=0.5)
+			clf = XGBRegressor(random_state=seed, subsample=subsample)
 			clf.fit(X_train, y_train, eval_metric='mae')
 			y_hat = clf.predict(X_test)
 
@@ -127,7 +130,7 @@ def main():
 			pearson = stats.pearsonr(y_test, y_hat)[0]
 			split_results.append(pearson)
 		results.append(np.mean(split_results))
-		print(split_results)
+		# print(split_results)
 	print(np.mean(results))
 	# print(results)
 
