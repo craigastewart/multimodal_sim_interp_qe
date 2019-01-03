@@ -114,7 +114,7 @@ def main():
 		X_train, X_test = normalize(X_train, X_test)
 		split_results = []
 		for seed in seeds:
-			clf = XGBRegressor(random_state=989, subsample=1)
+			clf = XGBRegressor(random_state=seed, subsample=0.5)
 			clf.fit(X_train, y_train, eval_metric='mae')
 			y_hat = clf.predict(X_test)
 
@@ -127,7 +127,7 @@ def main():
 			pearson = stats.pearsonr(y_test, y_hat)[0]
 			split_results.append(pearson)
 		results.append(np.mean(split_results))
-		# print(split_results)
+		print(split_results)
 	print(np.mean(results))
 	# print(results)
 
