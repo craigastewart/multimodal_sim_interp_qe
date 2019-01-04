@@ -7,6 +7,8 @@ from scipy import stats
 
 data_dir = os.getcwd() + "/data/"
 seeds = [632, 358, 201, 219, 638]
+lang_str = ''
+feature_str = ''
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-fr","--french", action="store_true", help="Use french language setting", required=False)
@@ -18,14 +20,30 @@ parser.add_argument("-tf","--text_features", action="store_true", help="Use text
 parser.add_argument("-ia","--interp_audio", action="store_true", help="Use interpreter audio features", required=False)
 parser.add_argument("-sa","--src_audio", action="store_true", help="Use source audio features", required=False)
 parser.add_argument("-ss","--subsample", help="Subsample parameter value for XGBRegressor", default=1, required=False)
+parser.add_argument("-lr","--learning_rate", help="Learning rate value for XGBRegressor", default=0.1, required=False)
+parser.add_argument("-la","--lambda", help="Lambda parameter (L2 regularization) value for XGBRegressor", default=1, required=False)
+parser.add_argument("-ne","--n_estimators", help="Number of estimators for XGBRegressor", default=50, required=False) # Changed default from 100
+parser.add_argument("-cb","--colsample_bytree", help="colsample_bytree parameter (analogous to max_features) value for XGBRegressor", default=1, required=False)
 parser.add_argument("-t","--test", action="store_true", help="Evaluate on test set", required=False)
 args = vars(parser.parse_args())
 
-subsample = float(args["subsample"])
+
+# "eta", "subsample", "colsample_bytree", "lambda", "eval_metric"
+subsample = float(args["subsample"]) # lower = underfitting
+learning_rate = float(args["learning_rate"]) # 0.01-0.2 typical values
+colsample_bytree = float(args["colsample_bytree"]) # 0.5-1 typical values
+reg_lambda = float(args["lambda"])
+n_estimators = int(args["n_estimators"])
 
 if not args["text_features"] and not args["interp_audio"] and not args["src_audio"]:
 	raise IOError("No features selected, expected flag (-tf/-ia/-sa)")
 
+if args["text_features"]:
+	feature_str += 't'
+if args["interp_audio"]:
+	feature_str += 'i'
+if args["src_audio"]:
+	feature_str += 's'
 
 def get_languages(arguments):
 	langs = []
@@ -96,7 +114,8 @@ def normalize(X_train, X_test):
 
 
 def main():
-	X_data, y_data = compile_data(get_languages(args))
+	langs = get_languages(args)
+	X_data, y_data = compile_data(langs)
 	X_data, y_data, permutation = shuffle_data(X_data, y_data)
 	kf = KFold(n_splits=10)
 	results = []
@@ -117,7 +136,7 @@ def main():
 		X_train, X_test = normalize(X_train, X_test)
 		split_results = []
 		for seed in seeds:
-			clf = XGBRegressor(random_state=seed, subsample=subsample)
+			clf = XGBRegressor(random_state=seed, subsample=subsample, learning_rate=learning_rate, colsample_bytree=colsample_bytree, reg_lambda=reg_lambda, n_estimators=n_estimators)
 			clf.fit(X_train, y_train, eval_metric='mae')
 			y_hat = clf.predict(X_test)
 
@@ -130,9 +149,17 @@ def main():
 			pearson = stats.pearsonr(y_test, y_hat)[0]
 			split_results.append(pearson)
 		results.append(np.mean(split_results))
-		# print(split_results)
-	print(np.mean(results))
-	# print(results)
+
+	result = np.mean(results)
+	out_str = ''
+	# lang, features, lr, subsample, colsample_bytree, reg_lambda, n_estimators, result
+	lang_str = ''
+	for lang in langs:
+		lang_str += lang
+	out_str += "{},{},{},{},{},{},{},{}".format(lang_str, feature_str, learning_rate, subsample, colsample_bytree, reg_lambda, n_estimators, result)
+	with open('log.csv', 'a') as log_file:
+		log_file.write(out_str + '\n')
+	print("{} :: {} :: {}".format(lang_str, feature_str, result))
 
 
 if __name__ == "__main__":
