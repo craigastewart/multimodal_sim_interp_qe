@@ -87,10 +87,16 @@ def compile_data(languages):
 		lang_label = lang_dict[languages[0]]
 		features = []
 		if args["text_features"]:
-			if args["trimmed"]:
-				features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t')[:, text_feat_idx])
-			else:
-				features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t'))
+			if args["asr"]:
+					if args["trimmed"]:
+						features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t')[:, text_feat_idx])
+					else:
+						features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t'))
+				else:
+					if args["trimmed"]:
+						features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t')[:, text_feat_idx])
+					else:
+						features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t'))
 		if args["interp_audio"]:
 			if args["trimmed"]:
 				features.append(np.loadtxt(path + "interp_audio.tsv", delimiter='\t')[:, interp_aux_idx])
@@ -169,6 +175,8 @@ def normalize(X_train, X_test):
 def main():
 	langs = get_languages(args)
 	X_data, y_data = compile_data(langs)
+	yy = np.reshape(y_data, (-1, 1))
+	np.savetxt('all_features.csv', np.concatenate((X_data, yy), axis=1), delimiter=',')
 	X_data, y_data, permutation = shuffle_data(X_data, y_data)
 	kf = KFold(n_splits=10)
 
