@@ -32,17 +32,27 @@ parser.add_argument("-tr","--trimmed", action="store_true", help="Use trimmed mo
 parser.add_argument("-ss","--subsample", help="Subsample parameter value for XGBRegressor", default=1, required=False)
 parser.add_argument("-lr","--learning_rate", help="Learning rate value for XGBRegressor", default=0.1, required=False)
 parser.add_argument("-la","--lambda", help="Lambda parameter (L2 regularization) value for XGBRegressor", default=1, required=False)
-parser.add_argument("-ne","--n_estimators", help="Number of estimators for XGBRegressor", default=50, required=False) # Changed default from 100
+parser.add_argument("-ne","--n_estimators", help="Number of estimators for XGBRegressor", default=100, required=False)
 parser.add_argument("-cb","--colsample_bytree", help="colsample_bytree parameter (analogous to max_features) value for XGBRegressor", default=1, required=False)
 parser.add_argument("-t","--test", action="store_true", help="Evaluate on test set", required=False)
-parser.add_argument("-a","--asr", action="store_true", help="ASR transcripts", required=False)
+parser.add_argument("-a","--asr", action="store_true", help="Use ASR transcripts", required=False)
+parser.add_argument("-tu","--tuned", action="store_true", help="Use predefined tuned parameter settings for XGBRegressor", required=False)
 args = vars(parser.parse_args())
 
-subsample = float(args["subsample"])
-learning_rate = float(args["learning_rate"])
-colsample_bytree = float(args["colsample_bytree"])
-reg_lambda = float(args["lambda"])
-n_estimators = int(args["n_estimators"])
+if args["tuned"]:
+	# Pre-tuned parameters
+	subsample = 0.8
+	learning_rate = 0.09
+	colsample_bytree = 0.6
+	reg_lambda = 0.95
+	n_estimators = 400
+
+else:
+	subsample = float(args["subsample"])
+	learning_rate = float(args["learning_rate"])
+	colsample_bytree = float(args["colsample_bytree"])
+	reg_lambda = float(args["lambda"])
+	n_estimators = int(args["n_estimators"])
 
 if not args["text_features"] and not args["interp_audio"] and not args["src_audio"]:
 	raise IOError("No features selected, expected flag (-tf/-ia/-sa)")
@@ -88,15 +98,15 @@ def compile_data(languages):
 		features = []
 		if args["text_features"]:
 			if args["asr"]:
-					if args["trimmed"]:
-						features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t')[:, text_feat_idx])
-					else:
-						features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t'))
+				if args["trimmed"]:
+					features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t')[:, text_feat_idx])
 				else:
-					if args["trimmed"]:
-						features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t')[:, text_feat_idx])
-					else:
-						features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t'))
+					features.append(np.loadtxt(path + "text_features_asr.tsv", delimiter='\t'))
+			else:
+				if args["trimmed"]:
+					features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t')[:, text_feat_idx])
+				else:
+					features.append(np.loadtxt(path + "text_features.tsv", delimiter='\t'))
 		if args["interp_audio"]:
 			if args["trimmed"]:
 				features.append(np.loadtxt(path + "interp_audio.tsv", delimiter='\t')[:, interp_aux_idx])
