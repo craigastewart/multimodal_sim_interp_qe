@@ -175,8 +175,6 @@ def normalize(X_train, X_test):
 def main():
 	langs = get_languages(args)
 	X_data, y_data = compile_data(langs)
-	yy = np.reshape(y_data, (-1, 1))
-	np.savetxt('all_features.csv', np.concatenate((X_data, yy), axis=1), delimiter=',')
 	X_data, y_data, permutation = shuffle_data(X_data, y_data)
 	kf = KFold(n_splits=10)
 
